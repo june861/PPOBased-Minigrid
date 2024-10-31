@@ -30,13 +30,13 @@ parser.add_argument("--procs", type=int, default=16,
                     help="number of processes (default: 16)")
 parser.add_argument("--frames", type=int, default=10**7,
                     help="number of frames of training (default: 1e7)")
-
+ 
 # Parameters for main algorithm
 parser.add_argument("--epochs", type=int, default=4,
                     help="number of epochs for PPO (default: 4)")
 parser.add_argument("--batch-size", type=int, default=256,
                     help="batch size for PPO (default: 256)")
-parser.add_argument("--frames-per-proc", type=int, default=128,
+parser.add_argument("--frames-per-proc", type=int, default=1024,
                     help="number of frames per process before update (default: 5 for A2C and 128 for PPO)")
 parser.add_argument("--discount", type=float, default=0.99,
                     help="discount factor (default: 0.99)")
@@ -65,6 +65,9 @@ parser.add_argument("--text", action="store_true", default=False,
 parser.add_argument("--use_action_dist", action="store_true", default=False, help="use extra action to adjust ratio")
 parser.add_argument("--eval_freq", type=int, default=5, help="the evaluation freqency for every steps")
 parser.add_argument("--eval_times", type=int, default=32, help="the evaluation times, recommend it as 16'times ")
+parser.add_argument("--use_surr", action="store_true", default=False, help="use 4surr")
+parser.add_argument("--sample_all_act", action="store_true", default=False, help="sample all other action to adjust ratio")
+
 if __name__ == "__main__":
     args = parser.parse_args()
     args.mem = args.recurrence > 1
@@ -138,7 +141,8 @@ if __name__ == "__main__":
         algo = torch_ac.PPOAlgo(envs, acmodel, device, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
                                 args.entropy_coef, args.value_loss_coef, args.max_grad_norm, args.recurrence,
                                 args.optim_eps, args.clip_eps, args.epochs, args.batch_size, preprocess_obss, 
-                                action_dim = int(envs[0].action_space.n), use_action_dist = args.use_action_dist)
+                                action_dim = int(envs[0].action_space.n), use_action_dist = args.use_action_dist,
+                                use_surr4 = args.use_surr, sample_all_act = args.sample_all_act)
     else:
         raise ValueError("Incorrect algorithm name: {}".format(args.algo))
 
