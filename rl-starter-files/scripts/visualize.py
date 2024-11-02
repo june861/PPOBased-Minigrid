@@ -22,7 +22,7 @@ parser.add_argument("--pause", type=float, default=0.1,
                     help="pause duration between two consequent actions of the agent (default: 0.1)")
 parser.add_argument("--gif", type=str, default=None,
                     help="store output as gif with the given filename")
-parser.add_argument("--episodes", type=int, default=1000000,
+parser.add_argument("--episodes", type=int, default=100,
                     help="number of episodes to visualize")
 parser.add_argument("--memory", action="store_true", default=False,
                     help="add a LSTM to the model")
@@ -62,6 +62,7 @@ if args.gif:
 
 # Create a window to view the environment
 env.render()
+
 
 for episode in range(args.episodes):
     obs, _ = env.reset()

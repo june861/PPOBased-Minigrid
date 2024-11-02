@@ -12,7 +12,8 @@ class PPOAlgo(BaseAlgo):
     def __init__(self, envs, acmodel, device=None, num_frames_per_proc=None, discount=0.99, lr=0.001, gae_lambda=0.95,
                  entropy_coef=0.01, value_loss_coef=0.5, max_grad_norm=0.5, recurrence=4,
                  adam_eps=1e-8, clip_eps=0.2, epochs=5, batch_size=256, preprocess_obss=None,
-                 reshape_reward=None, action_dim = None, use_action_dist = True):
+                 reshape_reward=None, action_dim = None, use_action_dist = True, use_surr4 = False,
+                 sample_all_act = False):
         num_frames_per_proc = num_frames_per_proc or 128
 
         super().__init__(envs, acmodel, device, num_frames_per_proc, discount, lr, gae_lambda, entropy_coef,
@@ -24,11 +25,38 @@ class PPOAlgo(BaseAlgo):
 
         # DONE(junweiluo) : 增加参数，用于区分baseline
         self._use_action_dist = use_action_dist
+        self._use_surr4 = use_surr4
+        self._sample_all_act = sample_all_act
 
         assert self.batch_size % self.recurrence == 0
 
         self.optimizer = torch.optim.Adam(self.acmodel.parameters(), lr, eps=adam_eps)
         self.batch_num = 0
+
+    def sample_alter_act(self, sb, a_logprobs):
+        mask_ = torch.ones_like(sb.a_logprobs)
+        mask_[torch.arange(sb.a_logprobs.shape[0]), sb.action] = 0.0
+        # 采样全部动作
+        if self._sample_all_act:
+            selected_indice = torch.multinomial(mask_, num_samples=(a_logprobs.shape[1] - 1)).squeeze()
+            tmp = torch.arange(sb.a_logprobs.shape[0]).unsqueeze(1).expand(-1, (a_logprobs.shape[1] - 1))
+            old_a_logprobs_2 = sb.a_logprobs[tmp, selected_indice]
+            a_logprobs_2 = a_logprobs[tmp, selected_indice]
+            # 去梯度
+            ratio2 = torch.exp(a_logprobs_2 - old_a_logprobs_2).detach()
+            ratio2 = torch.prod(ratio2, dim=1, keepdim=False)
+            ratio2 = torch.clamp(ratio2, 1.0 - self.clip_eps, 1.0 + self.clip_eps)
+        else:
+            selected_indice = torch.multinomial(mask_, num_samples=1).squeeze()
+            tmp = torch.arange(sb.a_logprobs.shape[0])
+            old_a_logprobs_2 = sb.a_logprobs[tmp, selected_indice]
+            a_logprobs_2 = a_logprobs[tmp, selected_indice]
+            # 去梯度
+            ratio2 = torch.exp(a_logprobs_2 - old_a_logprobs_2).detach()
+            ratio2 = torch.clamp(ratio2, 1.0 - self.clip_eps, 1.0 + self.clip_eps)
+        
+        return ratio2
+
 
     def update_parameters(self, exps):
         # Collect experiences
@@ -77,28 +105,37 @@ class PPOAlgo(BaseAlgo):
 
                     # DONE(junweiluo) : PPO改进算法
                     if self._use_action_dist:
-                        ratio1 = torch.exp(dist.log_prob(sb.action) - sb.log_prob)
-                        # 随机采样一个额外的动作
-                        a_logprobs = dist.logits
-                        mask_ = torch.ones_like(sb.a_logprobs)
-                        mask_[torch.arange(sb.a_logprobs.shape[0]), sb.action] = 0.0
-                        selected_indice = torch.multinomial(mask_, num_samples=1).squeeze()
-                        old_a_logprobs_2 = sb.a_logprobs[torch.arange(sb.a_logprobs.shape[0]), selected_indice]
-                        a_logprobs_2 = a_logprobs[torch.arange(sb.a_logprobs.shape[0]), selected_indice]
-                        # 去梯度
-                        ratio2 = torch.exp(a_logprobs_2 - old_a_logprobs_2).detach()
-                        ratio2 = torch.clamp(ratio2, 1.0 - self.clip_eps / 2, 1.0 + self.clip_eps / 2)
-                        ratio = ratio1 * ratio2
-                    
+                        if self._use_surr4 == False:
+                            # 采样 all_action
+                            ratio1 = torch.exp(dist.log_prob(sb.action) - sb.log_prob)
+                            # 随机采样额外的动作
+                            a_logprobs = dist.logits
+                            ratio2 = self.sample_alter_act(sb = sb, a_logprobs = a_logprobs)
+                            ratio = ratio1 * ratio2
+                            # 计算损失
+                            surr1 = ratio * sb.advantage
+                            surr2 = torch.clamp(ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps) * sb.advantage
+                            policy_loss = -torch.min(surr1, surr2).mean()
+                        else:
+                            ratio1 = torch.exp(dist.log_prob(sb.action) - sb.log_prob)
+                            a_logprobs = dist.logits
+                            ratio2 = self.sample_alter_act(sb = sb, a_logprobs = a_logprobs)
+                            surr1 = ratio1 * sb.advantage
+                            surr2 = torch.clamp(ratio1, 1.0 - self.clip_eps, 1.0 + self.clip_eps) * sb.advantage
+                            surr3 = ratio1 * ratio2 * sb.advantage
+                            surr4 = torch.clamp(ratio2 * ratio1, 1.0 - self.clip_eps, 1.0 + self.clip_eps) * sb.advantage
+                            stacked_tensors = torch.stack([surr1, surr2, surr3, surr4])
+                            min_result = torch.min(stacked_tensors, dim=0).values
+                            policy_loss = - min_result.mean()
                     # baseline
                     else:
                         ratio1 = torch.exp(dist.log_prob(sb.action) - sb.log_prob)
                         ratio2 = torch.ones_like(ratio1).detach()
                         ratio = ratio1
-                    
-                    surr1 = ratio * sb.advantage
-                    surr2 = torch.clamp(ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps) * sb.advantage
-                    policy_loss = -torch.min(surr1, surr2).mean()
+                        # 缩进一下，用于测试4 surr
+                        surr1 = ratio * sb.advantage
+                        surr2 = torch.clamp(ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps) * sb.advantage
+                        policy_loss = -torch.min(surr1, surr2).mean()
 
                     value_clipped = sb.value + torch.clamp(value - sb.value, -self.clip_eps, self.clip_eps)
                     surr1 = (value - sb.returnn).pow(2)

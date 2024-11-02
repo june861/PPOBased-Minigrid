@@ -1,21 +1,11 @@
 #!/bin/bash
-
-# 定义可修改的参数
-ALGO="ppo"
-FRAMES=20000000
-PYENV="py310"
 ENVS=(
     # "MiniGrid-SimpleCrossingS11N5-v0" 
     # "MiniGrid-DistShift2-v0"
     # "BabyAI-BossLevel-v0"
     # "BabyAI-KeyCorridorS6R3-v0", 没效果
     "BabyAI-OneRoomS20-v0"
-    # "MiniGrid-DoorKey-16x16-v0"
 )
-MODEL_PREFIX="MiniGrid_"
-NUM_RUNS=1
-# 日志文件基础路径
-LOG_DIR="/home/june/minigrid_logs"
 
 # 切换目录
 PWD="/home/june/babyai-repo/rl-starter-files"
@@ -27,9 +17,7 @@ conda activate $PYENV
 
 # 遍历每个环境变量
 for ENV in "${ENVS[@]}"; do
-    # baseline只跑一个
-    BASE_MODEL="${ENV}_baseline"
-    BASE_LOG_FILE="${LOG_DIR}/${MODEL}_baseline.log"
+    # 
     # 启动第一个训练命令
     echo "Training started for environment $ENV without action distribution with the following parameters:"
     echo "Algorithm: $ALGO"
