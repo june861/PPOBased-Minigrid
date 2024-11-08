@@ -5,15 +5,17 @@ ALGO="ppo"
 FRAMES=20000000
 PYENV="py310"
 ENVS=(
-    # "MiniGrid-SimpleCrossingS11N5-v0" 
+    "MiniGrid-SimpleCrossingS11N5-v0" 
     # "MiniGrid-DistShift2-v0"
     # "BabyAI-BossLevel-v0"
     # "BabyAI-KeyCorridorS6R3-v0", 没效果
-    "BabyAI-OneRoomS20-v0"
+    # "BabyAI-OneRoomS20-v0"
     # "MiniGrid-DoorKey-16x16-v0"
+    "MiniGrid-LavaGapS7-v0"
+    # "MiniGrid-Dynamic-Obstacles-16x16-v0"
 )
 MODEL_PREFIX="MiniGrid_"
-NUM_RUNS=1
+MAX_SEED=3
 # 日志文件基础路径
 LOG_DIR="/home/june/minigrid_logs"
 
@@ -39,65 +41,77 @@ for ENV in "${ENVS[@]}"; do
     echo "Logs will be saved to: $BASE_LOG_FILE"
     nohup python3 -m scripts.train --algo $ALGO --env $ENV --frames $FRAMES --model $BASE_MODEL >> $BASE_LOG_FILE 2>&1 &
 
-    for ((i=1; i<=NUM_RUNS; i++)); do
+    for ((i=1; i<=MAX_SEED; i++)); do
         # 采样全部动作的
-        ALL_ACTION_MODEL_SURR4="${ENV}_seed${i}_all_act_4surr"
-        ALL_ACTION_LOG_FILE_SURR4="${LOG_DIR}/${MODEL}_all_act_4surr.log"
+        # ALL_ACTION_MODEL_SURR4="${ENV}_seed${i}_all_act_4surr"
+        # ALL_ACTION_LOG_FILE_SURR4="${LOG_DIR}/${MODEL}_all_act_4surr.log"
 
-        echo "Training started for environment $ENV with action distribution with the following parameters:"
+        # echo "Training started for environment $ENV with action distribution with the following parameters:"
+        # echo "Algorithm: $ALGO"
+        # echo "Environment: $ENV"
+        # echo "Frames: $FRAMES"
+        # echo "Model: $ALL_ACTION_MODEL_SURR4"
+        # echo "Action Distribution Enabled"
+        # echo "Logs will be saved to: $ALL_ACTION_LOG_FILE_SURR4"
+        # # 启动第二个训练命令（包含 --use_action_dist）
+        # nohup python3 -m scripts.train --algo $ALGO --env $ENV --frames $FRAMES --model $ALL_ACTION_MODEL_SURR4 \
+        #  --use_action_dist --seed $i --sample_all_act  --use_surr >> $ALL_ACTION_LOG_FILE_SURR4 2>&1 &
+
+        # ALL_ACTION_MODEL="${ENV}_seed${i}_all_act"
+        # ALL_ACTION_LOG_FILE="${LOG_DIR}/${MODEL}_all_act.log"
+        # echo "Training started for environment $ENV with action distribution with the following parameters:"
+        # echo "Algorithm: $ALGO"
+        # echo "Environment: $ENV"
+        # echo "Frames: $FRAMES"
+        # echo "Model: $ALL_ACTION_MODEL"
+        # echo "Action Distribution Enabled"
+        # echo "Logs will be saved to: $ALL_ACTION_LOG_FILE"
+        # # 启动第二个训练命令（包含 --use_action_dist）
+        # nohup python3 -m scripts.train --algo $ALGO --env $ENV --frames $FRAMES --model $ALL_ACTION_MODEL \
+        #  --use_action_dist --seed $i --sample_all_act >> $ALL_ACTION_LOG_FILE 2>&1 &
+
+
+        # # 只采样两个动作的
+        # TWO_ACTION_MODEL_SURR4="${ENV}_seed${i}_two_act_4surr"
+        # TWO_ACTION_LOG_FILE_SURR4="${LOG_DIR}/${MODEL}_two_act_4surr.log"
+
+        # echo "Training started for environment $ENV with action distribution with the following parameters:"
+        # echo "Algorithm: $ALGO"
+        # echo "Environment: $ENV"
+        # echo "Frames: $FRAMES"
+        # echo "Model: $TWO_ACTION_MODEL_SURR4"
+        # echo "Action Distribution Enabled"
+        # echo "Logs will be saved to: $TWO_ACTION_LOG_FILE_SURR4"
+        # # 启动第二个训练命令（包含 --use_action_dist）
+        # nohup python3 -m scripts.train --algo $ALGO --env $ENV --frames $FRAMES --model $TWO_ACTION_MODEL_SURR4 \
+        # --use_action_dist --seed $i --use_surr >> $TWO_ACTION_LOG_FILE_SURR4 2>&1 &
+
+        # TWO_ACTION_MODEL="${ENV}_seed${i}_two_act"
+        # TWO_ACTION_LOG_FILE="${LOG_DIR}/${MODEL}_two_act.log"
+
+        # echo "Training started for environment $ENV with action distribution with the following parameters:"
+        # echo "Algorithm: $ALGO"
+        # echo "Environment: $ENV"
+        # echo "Frames: $FRAMES"
+        # echo "Model: $TWO_ACTION_MODEL"
+        # echo "Action Distribution Enabled"
+        # echo "Logs will be saved to: $TWO_ACTION_LOG_FILE"
+        # # 启动第二个训练命令（包含 --use_action_dist）
+        # nohup python3 -m scripts.train --algo $ALGO --env $ENV --frames $FRAMES --model $TWO_ACTION_MODEL \
+        # --use_action_dist --seed $i >> $TWO_ACTION_LOG_FILE 2>&1 &
+
+        # # 噪声对比实验
+        NOISE_MODEL="${ENV}_seed${i}_noise"
+        NOISE_LOG_FILE="${LOG_DIR}/${MODEL}_noise_ppo.log"
+
+        echo "Noise Contrastive Experiments"
         echo "Algorithm: $ALGO"
         echo "Environment: $ENV"
         echo "Frames: $FRAMES"
-        echo "Model: $ALL_ACTION_MODEL_SURR4"
+        echo "Model: $NOISE_MODEL"
         echo "Action Distribution Enabled"
-        echo "Logs will be saved to: $ALL_ACTION_LOG_FILE_SURR4"
-        # 启动第二个训练命令（包含 --use_action_dist）
-        nohup python3 -m scripts.train --algo $ALGO --env $ENV --frames $FRAMES --model $ALL_ACTION_MODEL_SURR4 \
-         --use_action_dist --seed $i --sample_all_act  --use_surr >> $ALL_ACTION_LOG_FILE_SURR4 2>&1 &
-
-        ALL_ACTION_MODEL="${ENV}_seed${i}_all_act"
-        ALL_ACTION_LOG_FILE="${LOG_DIR}/${MODEL}_all_act.log"
-        echo "Training started for environment $ENV with action distribution with the following parameters:"
-        echo "Algorithm: $ALGO"
-        echo "Environment: $ENV"
-        echo "Frames: $FRAMES"
-        echo "Model: $ALL_ACTION_MODEL"
-        echo "Action Distribution Enabled"
-        echo "Logs will be saved to: $ALL_ACTION_LOG_FILE"
-        # 启动第二个训练命令（包含 --use_action_dist）
-        nohup python3 -m scripts.train --algo $ALGO --env $ENV --frames $FRAMES --model $ALL_ACTION_MODEL \
-         --use_action_dist --seed $i --sample_all_act >> $ALL_ACTION_LOG_FILE 2>&1 &
-
-
-        # 只采样两个动作的
-        TWO_ACTION_MODEL_SURR4="${ENV}_seed${i}_two_act_4surr"
-        TWO_ACTION_LOG_FILE_SURR4="${LOG_DIR}/${MODEL}_two_act_4surr.log"
-
-        echo "Training started for environment $ENV with action distribution with the following parameters:"
-        echo "Algorithm: $ALGO"
-        echo "Environment: $ENV"
-        echo "Frames: $FRAMES"
-        echo "Model: $TWO_ACTION_MODEL_SURR4"
-        echo "Action Distribution Enabled"
-        echo "Logs will be saved to: $TWO_ACTION_LOG_FILE_SURR4"
-        # 启动第二个训练命令（包含 --use_action_dist）
-        nohup python3 -m scripts.train --algo $ALGO --env $ENV --frames $FRAMES --model $TWO_ACTION_MODEL_SURR4 \
-        --use_action_dist --seed $i --use_surr >> $TWO_ACTION_LOG_FILE_SURR4 2>&1 &
-
-        TWO_ACTION_MODEL="${ENV}_seed${i}_two_act"
-        TWO_ACTION_LOG_FILE="${LOG_DIR}/${MODEL}_two_act.log"
-
-        echo "Training started for environment $ENV with action distribution with the following parameters:"
-        echo "Algorithm: $ALGO"
-        echo "Environment: $ENV"
-        echo "Frames: $FRAMES"
-        echo "Model: $TWO_ACTION_MODEL"
-        echo "Action Distribution Enabled"
-        echo "Logs will be saved to: $TWO_ACTION_LOG_FILE"
-        # 启动第二个训练命令（包含 --use_action_dist）
-        nohup python3 -m scripts.train --algo $ALGO --env $ENV --frames $FRAMES --model $TWO_ACTION_MODEL \
-        --use_action_dist --seed $i >> $TWO_ACTION_LOG_FILE 2>&1 &
-
-
+        echo "Logs will be saved to: $NOISE_LOG_FILE"
+        nohup python3 -m scripts.train  --algo $ALGO --env $ENV --frames $FRAMES --model $NOISE_MODEL \
+        --use_action_dist --seed $i  --use_noise >> $NOISE_LOG_FILE 2>&1 &
     done
 done

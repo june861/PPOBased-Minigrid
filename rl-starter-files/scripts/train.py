@@ -67,6 +67,7 @@ parser.add_argument("--eval_freq", type=int, default=5, help="the evaluation fre
 parser.add_argument("--eval_times", type=int, default=32, help="the evaluation times, recommend it as 16'times ")
 parser.add_argument("--use_surr", action="store_true", default=False, help="use 4surr")
 parser.add_argument("--sample_all_act", action="store_true", default=False, help="sample all other action to adjust ratio")
+parser.add_argument("--use_noise", action="store_true", default=False, help="noise contrasitive experiment")
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -142,7 +143,7 @@ if __name__ == "__main__":
                                 args.entropy_coef, args.value_loss_coef, args.max_grad_norm, args.recurrence,
                                 args.optim_eps, args.clip_eps, args.epochs, args.batch_size, preprocess_obss, 
                                 action_dim = int(envs[0].action_space.n), use_action_dist = args.use_action_dist,
-                                use_surr4 = args.use_surr, sample_all_act = args.sample_all_act)
+                                use_surr4 = args.use_surr, sample_all_act = args.sample_all_act, use_noise = args.use_noise)
     else:
         raise ValueError("Incorrect algorithm name: {}".format(args.algo))
 
