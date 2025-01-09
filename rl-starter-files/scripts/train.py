@@ -1,5 +1,6 @@
 import argparse
 import time
+import wandb
 import datetime
 import torch_ac
 import tensorboardX
@@ -8,7 +9,6 @@ import numpy as np
 import utils
 from utils import device
 from model import ACModel
-
 
 # Parse arguments
 parser = argparse.ArgumentParser()
@@ -68,6 +68,8 @@ parser.add_argument("--eval_times", type=int, default=32, help="the evaluation t
 parser.add_argument("--use_surr", action="store_true", default=False, help="use 4surr")
 parser.add_argument("--sample_all_act", action="store_true", default=False, help="sample all other action to adjust ratio")
 parser.add_argument("--use_noise", action="store_true", default=False, help="noise contrasitive experiment")
+parser.add_argument("--use_wandb", action="store_false", default=True, help="use wandb tool to log")
+parser.add_argument("--debugger_mode", action="store_true", default=False, help="use launch.json to launch debgguer mode")
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -87,6 +89,40 @@ if __name__ == "__main__":
     csv_file, csv_logger = utils.get_csv_logger(model_dir)
     tb_writer = tensorboardX.SummaryWriter(model_dir)
 
+    if args.use_wandb:
+        if args.use_action_dist == False:
+            if args.use_noise == False:
+                name_ = 'baseline'
+            else:
+                name_ = 'noise'
+        else:
+            if args.sample_all_act:
+                if args.use_surr:
+                    name_ = "all_surr"
+                else:
+                    name_ = "all"
+            else:
+                if args.use_surr:
+                    name_ = "two_surr"
+                else:
+                    name_ = "two"
+
+        times_ = int(time.time())
+        if args.debugger_mode:
+            group = f'{args.env}_{name_}_debugger'
+        else:
+            group = f'{args.env}_{name_}'
+        wandb_name = f'{args.env}_{name_}_{args.seed}_{times_}'
+        wandb.init(
+            project = "ppo-minigrid",
+            group = group,
+            name = wandb_name,
+            sync_tensorboard = False,
+            monitor_gym=True,
+            config=vars(args),
+            save_code=False,
+        )
+    
     # Log command and all script arguments
 
     txt_logger.info("{}\n".format(" ".join(sys.argv)))
@@ -209,6 +245,12 @@ if __name__ == "__main__":
             csv_logger.writerow(data)
             csv_file.flush()
 
+            if args.use_wandb:
+                # build dict
+                logs_ = dict()
+                for field, value in zip(header, data):
+                    logs_[field] = value
+                wandb.log(logs_)
 
             for k, v in add_to_scalars.items():
                 tb_writer.add_scalar(k, v, num_frames)

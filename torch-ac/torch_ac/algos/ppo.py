@@ -13,7 +13,7 @@ class PPOAlgo(BaseAlgo):
                  entropy_coef=0.01, value_loss_coef=0.5, max_grad_norm=0.5, recurrence=4,
                  adam_eps=1e-8, clip_eps=0.2, epochs=5, batch_size=256, preprocess_obss=None,
                  reshape_reward=None, action_dim = None, use_action_dist = True, use_surr4 = False,
-                 sample_all_act = False):
+                 sample_all_act = False, use_noise = False):
         num_frames_per_proc = num_frames_per_proc or 128
 
         super().__init__(envs, acmodel, device, num_frames_per_proc, discount, lr, gae_lambda, entropy_coef,

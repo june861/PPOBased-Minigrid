@@ -4,8 +4,8 @@ import numpy
 import re
 import torch
 import torch_ac
-import gymnasium as gym
-
+# import gymnasium as gym
+import gym
 import utils
 
 
