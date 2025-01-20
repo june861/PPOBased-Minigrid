@@ -70,6 +70,7 @@ class PPOAlgo(BaseAlgo):
             log_value_losses = []
             log_grad_norms = []
             # DONE(junweiluo) : 增加两个ratio的指标
+            log_ratio = []
             log_ratio1 = []
             log_ratio2 = []
 
@@ -81,6 +82,7 @@ class PPOAlgo(BaseAlgo):
                 batch_policy_loss = 0
                 batch_value_loss = 0
                 batch_loss = 0
+                batch_ratio = 0.0
                 batch_ratio1 = 0.0
                 batch_ratio2 = 0.0
 
@@ -151,6 +153,7 @@ class PPOAlgo(BaseAlgo):
                     batch_policy_loss += policy_loss.item()
                     batch_value_loss += value_loss.item()
                     batch_loss += loss
+                    batch_ratio += ratio.mean().item()
                     batch_ratio1 += ratio1.mean().item()
                     batch_ratio2 += ratio2.mean().item()
 
@@ -167,6 +170,7 @@ class PPOAlgo(BaseAlgo):
                 batch_value_loss /= self.recurrence
                 batch_loss /= self.recurrence
                 # DONE(junweiluo): add new metric
+                batch_ratio /= self.recurrence
                 batch_ratio1 /= self.recurrence
                 batch_ratio2 /= self.recurrence
 
@@ -186,6 +190,7 @@ class PPOAlgo(BaseAlgo):
                 log_value_losses.append(batch_value_loss)
                 log_grad_norms.append(grad_norm)
                 # DONE(junweiluo): add new metric
+                log_ratio.append(batch_ratio)
                 log_ratio1.append(batch_ratio1)
                 log_ratio2.append(batch_ratio2)
 
@@ -197,6 +202,7 @@ class PPOAlgo(BaseAlgo):
             "policy_loss": numpy.mean(log_policy_losses),
             "value_loss": numpy.mean(log_value_losses),
             "grad_norm": numpy.mean(log_grad_norms),
+            "ratio": numpy.mean(log_ratio),
             "ratio1" : numpy.mean(log_ratio1),
             "ratio2" : numpy.mean(log_ratio2),
         }

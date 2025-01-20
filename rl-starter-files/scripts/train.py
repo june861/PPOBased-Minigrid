@@ -114,10 +114,10 @@ if __name__ == "__main__":
             group = f'{args.env}_{name_}'
         wandb_name = f'{args.env}_{name_}_{args.seed}_{times_}'
         wandb.init(
-            project = "ppo-minigrid",
+            project = "ppo-minigrid-v1",
             group = group,
             name = wandb_name,
-            sync_tensorboard = False,
+            sync_tensorboard = True,
             monitor_gym=True,
             config=vars(args),
             save_code=False,
@@ -218,8 +218,8 @@ if __name__ == "__main__":
             data += rreturn_per_episode.values()
             header += ["num_frames_" + key for key in num_frames_per_episode.keys()]
             data += num_frames_per_episode.values()
-            header += ["entropy", "value", "policy_loss", "value_loss", "grad_norm","ratio1", "ratio2"]
-            data += [logs["entropy"], logs["value"], logs["policy_loss"], logs["value_loss"], logs["grad_norm"], logs["ratio1"], logs["ratio2"]]
+            header += ["entropy", "value", "policy_loss", "value_loss", "grad_norm","ratio","ratio1", "ratio2"]
+            data += [logs["entropy"], logs["value"], logs["policy_loss"], logs["value_loss"], logs["grad_norm"], logs["ratio"],logs["ratio1"], logs["ratio2"]]
 
             # DONE(junweiluo)： 修改写入Tensorboard的指标
             add_to_scalars = {
@@ -259,19 +259,18 @@ if __name__ == "__main__":
                 tb_writer.add_scalar(field, value, num_frames)
 
         # DONE(junweiluo)：增加训练时评估
-        if update % args.eval_freq == 0:
-            eval_epoch = args.eval_times // args.procs
-            eval_total_reward = 0.0
-            for _ in range(eval_epoch):
-                eval_exps, eval_logs = algo.collect_experiences()
-                eval_total_reward += np.mean(logs1['return_per_episode']).item()
-            eval_total_reward /= eval_epoch
-            tb_writer.add_scalar('eval_avg_reward', eval_total_reward, global_step = eval_steps)
-            eval_steps += 1
+        # if update % args.eval_freq == 0:
+        #     eval_epoch = args.eval_times // args.procs
+        #     eval_total_reward = 0.0
+        #     for _ in range(eval_epoch):
+        #         eval_exps, eval_logs = algo.collect_experiences()
+        #         eval_total_reward += np.mean(logs1['return_per_episode']).item()
+        #     eval_total_reward /= eval_epoch
+        #     tb_writer.add_scalar('eval_avg_reward', eval_total_reward, global_step = eval_steps)
+        #     eval_steps += 1
 
 
         # Save status
-
         if args.save_interval > 0 and update % args.save_interval == 0:
             status = {"num_frames": num_frames, "update": update,
                       "model_state": acmodel.state_dict(), "optimizer_state": algo.optimizer.state_dict()}
